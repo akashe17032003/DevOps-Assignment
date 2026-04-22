@@ -186,4 +186,143 @@ This design ensures:
 * Scalable and cost-effective infrastructure
 * High availability with minimal downtime
 
+**Part-2 Infrastructure Design**
+
+**Overview :**
+
+This repository contains the infrastructure design for deploying a Spring Boot service (`sync-service`) on Google Cloud Platform (GCP). The design focuses on scalability, security, cost efficiency, and operational simplicity, making it suitable for a startup environment.
+
+
+**Request Flow (Step-by-Step) :**
+
+1. A user sends a request over HTTPS from a web or mobile application.
+
+2. The request first passes through Cloud Armor, which acts as a security layer to protect against malicious traffic and common web attacks.
+
+3. The request is then received by the HTTPS Load Balancer, which routes it to the appropriate backend service.
+
+4. The request is forwarded to Cloud Run, where the Spring Boot application is running.
+
+5. The application retrieves required secrets such as database credentials from Secret Manager using secure access.
+
+6. Based on the request, the application interacts with MongoDB Atlas through a private endpoint:
+
+   * Write operations go to the primary node
+   * Read operations can be served from secondary nodes
+
+7. If the request involves a long-running or heavy task, the application publishes a message to Cloud Pub/Sub instead of processing it immediately.
+
+8. Cloud Run Jobs (background workers) consume messages from Pub/Sub and process them asynchronously.
+
+9. Once processing is complete, the application sends the response back through the Load Balancer to the user.
+
+10. Throughout this process, logs, metrics, and traces are collected using Cloud Logging, Cloud Monitoring, Cloud Trace, and Error Reporting.
+
+
+Architecture Diagram :
+
+Add the architecture diagram file in this repository as:
+
+`**infra_Design.jpg**`
+
+**Compute Choice :**
+
+The service is deployed using Cloud Run.
+
+Cloud Run was selected because it is a serverless platform that automatically scales based on incoming traffic. It eliminates the need to manage infrastructure and allows cost savings by charging only for actual usage. This makes it well suited for startup workloads where traffic may be unpredictable.
+
+Other options such as GKE and Compute Engine were considered but not chosen. GKE provides more control but introduces operational complexity and higher costs. Compute Engine requires manual scaling and maintenance, which increases operational overhead.
+
+
+**Database Design :**
+
+
+MongoDB Atlas is used as the database solution.
+
+This is a managed database service that provides built-in replication, high availability, and automated backups. It reduces the need for manual database management and integrates securely with GCP through private endpoints.
+
+The database is not exposed to the public internet, ensuring secure access from the application.
+
+
+**Networking :**
+
+The architecture uses a Virtual Private Cloud (VPC) to separate public and private components.
+
+External traffic enters through an HTTPS Load Balancer. Cloud Armor is used to protect against common web attacks and distributed denial-of-service (DDoS) attacks.
+
+The application runs on Cloud Run and communicates with private resources such as the database through secure networking mechanisms.
+
+
+**Secrets and Access Control :**
+
+Sensitive information such as database credentials and API keys are stored in Secret Manager.
+
+Access to resources is controlled using Identity and Access Management (IAM), following the principle of least privilege. Each service is granted only the permissions it needs to function.
+
+This ensures that no secrets are hardcoded in the application and reduces security risks.
+
+
+**Asynchronous Processing :**
+
+For tasks that do not need immediate completion, the system uses an asynchronous processing model.
+
+Cloud Pub/Sub is used as a messaging system where tasks are queued. Cloud Run Jobs act as background workers that consume these tasks and process them independently.
+
+This approach improves system performance and ensures that user requests are not delayed by long-running operations.
+
+**CI/CD Pipeline :**
+
+The deployment process is automated using a CI/CD pipeline.
+
+The typical flow is:
+
+* Code is pushed to the source repository
+* Cloud Build compiles the application and runs tests
+* A container image is created and stored in Artifact Registry
+* The application is deployed to Cloud Run
+
+This ensures consistent and reliable deployments with minimal manual intervention.
+
+Logging and Monitoring :
+
+The system uses GCP’s observability tools to track performance and issues.
+
+* Cloud Logging is used for collecting application logs
+* Cloud Monitoring is used for metrics and alerting
+* Cloud Trace is used for request tracing
+* Error Reporting is used to capture and analyze application errors
+
+This provides complete visibility into system behavior and helps in troubleshooting.
+
+**Cost Considerations :**
+
+The design prioritizes cost efficiency.
+
+Cloud Run automatically scales down to zero when there is no traffic, eliminating idle costs. Managed services reduce operational overhead. Logging retention and resource sizing can be adjusted based on usage to control costs further.
+
+**Scalability :**
+
+The system is designed to scale automatically.
+
+Cloud Run scales based on incoming requests. Pub/Sub handles message scaling independently, and MongoDB Atlas supports horizontal scaling if required.
+
+**Security Considerations :** 
+
+The architecture includes several security best practices:
+
+* All traffic is served over HTTPS
+* Cloud Armor provides protection against web-based attacks
+* The database is not publicly accessible
+* Secrets are stored securely in Secret Manager
+* IAM enforces strict access control
+
+**Trade-offs :**
+
+There are some trade-offs in this design.
+
+Cloud Run provides ease of use but offers less control compared to Kubernetes. MongoDB Atlas introduces an external dependency outside GCP. Serverless platforms may also introduce minor cold start latency.
+
+**Conclusion :**
+
+This design provides a secure, scalable, and cost-effective infrastructure for running a modern backend service on GCP. It balances simplicity and functionality, making it suitable for both startup environments and production workloads.
 
