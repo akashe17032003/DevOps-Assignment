@@ -223,7 +223,7 @@ Architecture Diagram :
 
 Add the architecture diagram file in this repository as:
 
-`**infra_Design.jpg**`
+`**Infra_Design.jpg**`
 
 **Compute Choice :**
 
